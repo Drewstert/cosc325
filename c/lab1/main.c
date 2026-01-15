@@ -37,8 +37,8 @@ int main() {
     printf("--- Part 1: State and Sequence ---\n");
 
     int x = 2;
-    x = x + 4;
-    x = x * 3;
+    x = x + 3;
+    x = x * 4;
     printf("x=%d\n", x);
 
     // TODO: swap the last two assignments above and re-run
