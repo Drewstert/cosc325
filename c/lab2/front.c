@@ -2,6 +2,8 @@
              arithmetic expressions */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
 #include <string.h>
 
@@ -16,21 +18,26 @@ int  nextToken;
 FILE *in_fp;
 
 /* Function declarations */
-void  addChar();
-void  getChar();
-void  getNonBlank();
-int  lex();
+void addChar();
+void getChar();
+void getNonBlank();
+int lex();
 
 /* Character classes */
 #define LETTER 0
 #define DIGIT 1
+#define QUOTE 2
 #define UNKNOWN 99
 #define QUOTE 2
 
 /* Token codes */
+#define STR_LIT 8
 #define INT_LIT 10
+#define FLOAT_LIT 9
 #define IDENT 11
-#define ASSIGN_OP 20
+#define LT_OP 18
+#define RT_OP 19
+#define EQUALS_OP 20
 #define ADD_OP 21
 #define SUB_OP 22
 #define MULT_OP 23
@@ -39,24 +46,27 @@ int  lex();
 #define RIGHT_PAREN 26
 #define COMMA 27
 #define SEMICOLON 28
-#define CR 30          /* Carriage Return / Newline */
+#define CR 30
 #define RELOP 31       /* <, >, <=, >=, <> */
 #define STRING_LIT 32  /* "String Content" */
 #define KEYWORD 33     /* PRINT, IF, etc. */
 #define VAR 34         /* Single letter variable */
-#define ERROR_TOKEN 99 /* Illegal symbols */
+#define ERROR_TOKEN 99
 
 /******************************************************/
 /* main driver */
-int main() {
-   /* Open the input data file and process its contents */
-   if  ((in_fp = fopen("front.in", "r")) == NULL)
-     printf("ERROR - cannot open front.in \n");
-   else  {
-     getChar();
-     do   {
-       lex();
-    }  while (nextToken != EOF);
+int main()
+{
+  /* Open the input data file and process its contents */
+  if ((in_fp = fopen("front.in", "r")) == NULL)
+    printf("ERROR - cannot open front.in \n");
+  else
+  {
+    getChar();
+    do
+    {
+      lex();
+    } while (nextToken != EOF);
   }
   return 0;
 }
@@ -81,32 +91,34 @@ int isKeyword(char *str) {
 /* lookup - a function to lookup operators and parentheses
             and return the token */
 
-int  lookup(char  ch) {
-  switch  (ch) {
-    case  '(':
-      addChar();
-      nextToken = LEFT_PAREN;
-      break;
+int lookup(char ch)
+{
+  switch (ch)
+  {
+  case '(':
+    addChar();
+    nextToken = LEFT_PAREN;
+    break;
 
-    case  ')':
-      addChar();
-      nextToken = RIGHT_PAREN;
-      break;
+  case ')':
+    addChar();
+    nextToken = RIGHT_PAREN;
+    break;
 
-    case  '+':
-      addChar();
-      nextToken = ADD_OP;
-      break;
+  case '+':
+    addChar();
+    nextToken = ADD_OP;
+    break;
 
-    case  '-':
-      addChar();
-      nextToken = SUB_OP;
-      break; 
+  case '-':
+    addChar();
+    nextToken = SUB_OP;
+    break;
 
-    case  '*':
-      addChar();
-      nextToken = MULT_OP;
-      break;
+  case '*':
+    addChar();
+    nextToken = MULT_OP;
+    break;
 
     case  '/':
       addChar();
@@ -157,13 +169,15 @@ int  lookup(char  ch) {
       nextToken = EOF;
       break;
   }
-  return  nextToken;
+  return nextToken;
 }
 
 /*****************************************************/
 /* addChar - a function to add nextChar to lexeme */
-void  addChar() {
-  if  (lexLen <= 98) {
+void addChar()
+{
+  if (lexLen <= 98)
+  {
     lexeme[lexLen++] = nextChar;
     lexeme[lexLen] = 0;
   }
@@ -171,19 +185,25 @@ void  addChar() {
     printf("Error - lexeme is too long \n");
 }
 /*****************************************************/
-/* getChar - a function to get the next character of 
+/* getChar - a function to get the next character of
              input and determine its character class */
-void getChar() {
+void getChar()
+{
   int c = getc(in_fp);
-  if (c == EOF) {
+  if (c == EOF)
+  {
     charClass = EOF;
     nextChar = 0;
-  } else {
+  }
+  else
+  {
     nextChar = (char)c;
     if (isalpha((unsigned char)nextChar))
       charClass = LETTER;
     else if (isdigit((unsigned char)nextChar))
       charClass = DIGIT;
+    else if (nextChar == '"')
+      charClass = QUOTE;
     else if (nextChar == '"')
       charClass = QUOTE;
     else
@@ -199,10 +219,29 @@ void getNonBlank() {
     getChar();
 }
 
+/* examines current lexeme and returns specific token or IDENT if it's not a keyword */
+int keywordLookup() {
+  if (strcmp(lexeme,"PRINT")==0 || strcmp(lexeme,"PR")==0)
+    return PRINT;
+  else if (strcmp(lexeme,"INPUT")==0)
+    return INPUT;
+  else if (strcmp(lexeme,"GOSUB")==0)
+    return GOSUB;
+  else if (strcmp(lexeme,"LET")==0)
+    return LET;
+  //else if ... finish all the keywords!
+  else
+    return IDENT;
+  
+}
+
 /*****************************************************/
-/* lex - a simple lexical analyzer for arithmetic 
-         expressions */
-int  lex() {
+/* lex - a simple lexical analyzer for arithmetic
+         expressions 
+   // depends on charClass and nextChar already being set by the caller
+         */
+int lex()
+{
   lexLen = 0;
   getNonBlank();
   switch  (charClass) {
@@ -227,16 +266,17 @@ int  lex() {
       }
       break;
 
-/* Parse integer literals */
-    case  DIGIT:
+    /* Parse integer literals */
+  case DIGIT:
+    addChar();
+    getChar();
+    while (charClass == DIGIT)
+    {
       addChar();
       getChar();
-      while  (charClass == DIGIT) {
-       addChar();
-       getChar();
-   }
-   nextToken = INT_LIT;
-   break;
+    }
+    nextToken = INT_LIT;
+    break;
 
 /* Parse Strings */
   case QUOTE:
@@ -283,4 +323,3 @@ int  lex() {
  printf("Next token is: %d, Next lexeme is %s\n", nextToken, lexeme);
   return  nextToken;
 } /* End of function lex */
-
