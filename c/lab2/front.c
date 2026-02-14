@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 
 /* Global declarations */
 /* Variables */
@@ -12,7 +13,8 @@ char  nextChar;
 int  lexLen;
 int  token;
 int  nextToken;
-FILE *in_fp, *fopen();
+FILE *in_fp;
+
 /* Function declarations */
 void  addChar();
 void  getChar();
@@ -23,6 +25,7 @@ int  lex();
 #define LETTER 0
 #define DIGIT 1
 #define UNKNOWN 99
+#define QUOTE 2
 
 /* Token codes */
 #define INT_LIT 10
@@ -34,6 +37,15 @@ int  lex();
 #define DIV_OP 24
 #define LEFT_PAREN 25
 #define RIGHT_PAREN 26
+#define COMMA 27
+#define SEMICOLON 28
+#define CR 30          /* Carriage Return / Newline */
+#define RELOP 31       /* <, >, <=, >=, <> */
+#define STRING_LIT 32  /* "String Content" */
+#define KEYWORD 33     /* PRINT, IF, etc. */
+#define VAR 34         /* Single letter variable */
+#define ERROR_TOKEN 99 /* Illegal symbols */
+
 /******************************************************/
 /* main driver */
 int main() {
@@ -46,6 +58,23 @@ int main() {
        lex();
     }  while (nextToken != EOF);
   }
+  return 0;
+}
+
+/*****************************************************/
+/* isKeyword - checks if the current lexeme is a known keyword */
+int isKeyword(char *str) {
+    const char *keywords[] = {
+        "PRINT", "IF", "THEN", "GOTO", "INPUT", "LET", "GOSUB", 
+        "RETURN", "CLEAR", "LIST", "RUN", "END"
+    };
+    int numKeywords = 12;
+    for (int i = 0; i < numKeywords; i++) {
+        if (strcmp(str, keywords[i]) == 0) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /*****************************************************/
@@ -84,6 +113,45 @@ int  lookup(char  ch) {
       nextToken = DIV_OP;
       break;
 
+    case ',':
+        addChar();
+        nextToken = COMMA;
+        break;
+
+    case ';':
+        addChar();
+        nextToken = SEMICOLON;
+        break;
+        
+    case '=':
+        addChar();
+        nextToken = ASSIGN_OP; 
+        break;
+        
+    case '<':
+        addChar();
+        getChar();
+        if (nextChar == '>' || nextChar == '=') {
+            addChar(); // Add the second char (> or =)
+            nextToken = RELOP;
+        } else {
+            nextToken = RELOP; 
+            return nextToken;
+        }
+        break;
+
+    case '>':
+        addChar();
+        getChar(); // Look ahead
+        if (nextChar == '=' || nextChar == '<') { /* Handling >< if grammar implies it, grammar says > (<|=|e) */
+            addChar();
+            nextToken = RELOP;
+        } else {
+            nextToken = RELOP;
+            return nextToken;
+        }
+        break;
+
     default:
       addChar();
       nextToken = EOF;
@@ -116,6 +184,8 @@ void getChar() {
       charClass = LETTER;
     else if (isdigit((unsigned char)nextChar))
       charClass = DIGIT;
+    else if (nextChar == '"')
+      charClass = QUOTE;
     else
       charClass = UNKNOWN;
   }
@@ -125,7 +195,7 @@ void getChar() {
 /* getNonBlank - a function to call getChar until it
                  returns a non-whitespace character */
 void getNonBlank() {
-  while  (isspace(nextChar))
+  while  (isspace(nextChar) && nextChar != '\n')
     getChar();
 }
 
@@ -144,8 +214,18 @@ int  lex() {
         addChar();
         getChar();
       }
-    nextToken = IDENT;
-    break;
+    /* Check if it's a keyword */
+      if (isKeyword(lexeme)) {
+        nextToken = KEYWORD;
+      } 
+      /* Grammar says var is single letter A-Z */
+      else if (strlen(lexeme) == 1 && isupper(lexeme[0])) {
+        nextToken = VAR;
+      } 
+      else {
+        nextToken = IDENT;
+      }
+      break;
 
 /* Parse integer literals */
     case  DIGIT:
@@ -158,11 +238,37 @@ int  lex() {
    nextToken = INT_LIT;
    break;
 
+/* Parse Strings */
+  case QUOTE:
+     addChar(); // Add opening "
+     getChar();
+     while (nextChar != '"' && nextChar != '\n' && nextChar != EOF) {
+       addChar();
+       getChar();
+       }
+       if (nextChar == '"') {
+         addChar(); // Add closing "
+         getChar(); // Setup next char
+         nextToken = STRING_LIT;
+        } else {
+          nextToken = ERROR_TOKEN; // Unterminated string
+          printf("Error: Unterminated string literal\n");
+        }
+        break;
+
 /* Parentheses and operators */
-    case  UNKNOWN:
+  case UNKNOWN:
+    if (nextChar == '\n') {
+      nextToken = CR;
+      lexeme[0] = 'C'; lexeme[1] = 'R'; lexeme[2] = '\0';
+      getChar(); // Consume the newline
+    } else {
       lookup(nextChar);
+      if (nextToken != RELOP) {
       getChar();
-      break;
+      }
+    }
+        break;
 
 /* EOF */
     case  EOF:
@@ -172,9 +278,9 @@ int  lex() {
       lexeme[2] = 'F';
       lexeme[3] = 0;
       break;
+
  } /* End of switch */
- printf("Next token is: %d, Next lexeme is %s\n", 
-         nextToken, lexeme);
+ printf("Next token is: %d, Next lexeme is %s\n", nextToken, lexeme);
   return  nextToken;
 } /* End of function lex */
 
