@@ -13,5 +13,8 @@ public class Scope {
         Function<Integer, Integer> div10 = makeAdder(10);
         System.out.println(div5.apply(3));
         System.out.println(div10.apply(3));
+        int x = 1;
+        double y = 1/3;
+        System.out.println(x + " " + y);
     }
 }
