@@ -2,7 +2,6 @@
              arithmetic expressions */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
@@ -153,7 +152,7 @@ int lookup(char ch)
     case '>':
         addChar();
         getChar(); // Look ahead
-        if (nextChar == '=' || nextChar == '<') { /* Handling >< if grammar implies it, grammar says > (<|=|e) */
+        if (nextChar == '=' || nextChar == '<') {
             addChar();
             nextToken = RELOP;
         } else {
@@ -218,7 +217,6 @@ void getNonBlank() {
 /*****************************************************/
 /* lex - a simple lexical analyzer for arithmetic
          expressions 
-   // depends on charClass and nextChar already being set by the caller
          */
 int lex()
 {
@@ -264,23 +262,34 @@ int lex()
     nextToken = INT_LIT;
     break;
 
-/* Parse Strings */
+/* Parse Strings and Output PRINT commands */
   case QUOTE:
      addChar(); // Add opening "
      getChar();
      while (nextChar != '"' && nextChar != '\n' && nextChar != EOF) {
        addChar();
        getChar();
+     }
+     
+     if (nextChar == '"') {
+       addChar(); // Add closing "
+       getChar(); // Setup next char
+       nextToken = STRING_LIT;
+       
+       /* OUTPUT THE PRINT COMMAND */
+       /* Extract the string without the quotes and print it to the console */
+       char outputStr[100];
+       if (lexLen >= 2) {
+           strncpy(outputStr, lexeme + 1, lexLen - 2);
+           outputStr[lexLen - 2] = '\0'; // Null-terminate the string
+           printf("%s\n", outputStr);
        }
-       if (nextChar == '"') {
-         addChar(); // Add closing "
-         getChar(); // Setup next char
-         nextToken = STRING_LIT;
-        } else {
-          nextToken = ERROR_TOKEN; // Unterminated string
-          printf("Error: Unterminated string literal\n");
-        }
-        break;
+       
+      } else {
+        nextToken = ERROR_TOKEN; // Unterminated string
+        printf("Error: Unterminated string literal\n");
+      }
+      break;
 
 /* Parentheses and operators */
   case UNKNOWN:
@@ -291,10 +300,10 @@ int lex()
     } else {
       lookup(nextChar);
       if (nextToken != RELOP) {
-      getChar();
+        getChar();
       }
     }
-        break;
+    break;
 
 /* EOF */
     case  EOF:
