@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <string.h>
 
 /* Global declarations */
 /* Variables */
@@ -28,7 +27,6 @@ int lex();
 #define DIGIT 1
 #define QUOTE 2
 #define UNKNOWN 99
-#define QUOTE 2
 
 /* Token codes */
 #define STR_LIT 8
@@ -76,9 +74,9 @@ int main()
 int isKeyword(char *str) {
     const char *keywords[] = {
         "PRINT", "IF", "THEN", "GOTO", "INPUT", "LET", "GOSUB", 
-        "RETURN", "CLEAR", "LIST", "RUN", "END"
+        "RETURN", "CLEAR", "LIST", "RUN", "END", "REM"
     };
-    int numKeywords = 12;
+    int numKeywords = 13;
     for (int i = 0; i < numKeywords; i++) {
         if (strcmp(str, keywords[i]) == 0) {
             return 1;
@@ -137,7 +135,7 @@ int lookup(char ch)
         
     case '=':
         addChar();
-        nextToken = ASSIGN_OP; 
+        nextToken = EQUALS_OP; 
         break;
         
     case '<':
@@ -204,8 +202,6 @@ void getChar()
       charClass = DIGIT;
     else if (nextChar == '"')
       charClass = QUOTE;
-    else if (nextChar == '"')
-      charClass = QUOTE;
     else
       charClass = UNKNOWN;
   }
@@ -217,22 +213,6 @@ void getChar()
 void getNonBlank() {
   while  (isspace(nextChar) && nextChar != '\n')
     getChar();
-}
-
-/* examines current lexeme and returns specific token or IDENT if it's not a keyword */
-int keywordLookup() {
-  if (strcmp(lexeme,"PRINT")==0 || strcmp(lexeme,"PR")==0)
-    return PRINT;
-  else if (strcmp(lexeme,"INPUT")==0)
-    return INPUT;
-  else if (strcmp(lexeme,"GOSUB")==0)
-    return GOSUB;
-  else if (strcmp(lexeme,"LET")==0)
-    return LET;
-  //else if ... finish all the keywords!
-  else
-    return IDENT;
-  
 }
 
 /*****************************************************/
@@ -256,6 +236,12 @@ int lex()
     /* Check if it's a keyword */
       if (isKeyword(lexeme)) {
         nextToken = KEYWORD;
+        /* Ignore the rest of the line if the keyword is a REM comment */
+        if (strcmp(lexeme, "REM") == 0) {
+            while (nextChar != '\n' && nextChar != EOF) {
+                getChar();
+            }
+        }
       } 
       /* Grammar says var is single letter A-Z */
       else if (strlen(lexeme) == 1 && isupper(lexeme[0])) {
@@ -320,6 +306,6 @@ int lex()
       break;
 
  } /* End of switch */
- printf("Next token is: %d, Next lexeme is %s\n", nextToken, lexeme);
+ 
   return  nextToken;
 } /* End of function lex */
