@@ -50,3 +50,9 @@ sibling(X, Y) :- parent(Z, X), parent(Z, Y), X \= Y.
 % aunt(X, Y) means X is the aunt of Y
 uncle(X, Y) :- male(X), parent(Z, Y), sibling(X, Z).
 aunt(X, Y) :- female(X), parent(Z, Y), sibling(X, Z).
+
+% reverse(R, L) means R is the reversed version of L
+% Uses an accumulator for linear-time reversal of ismple (non-nested) lists
+reverse(R, L) :- reverse_acc(L, [], R).
+reverse_acc([], Acc, Acc).
+reverse_acc([H|T], Acc, R) :- reverse_acc(T, [H|Acc], R).
